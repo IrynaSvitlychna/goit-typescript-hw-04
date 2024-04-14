@@ -151,3 +151,108 @@ export function FormComponent() {
 Описати тип PropsProvider: Опишіть правильний тип для дітей
 
 Описати тип PropsMenu: Опишіть тип для menus, він має бути від типу Menu
+/////////////////////////////////////////////////////////////////////////////////////////////
+import React, { createContext, useMemo, useState, useContext, ReactNode } from "react";
+import noop from "lodash/noop";
+
+type MenuIds = "first" | "second" | "last";
+type Menu = { id: MenuIds; title: string };
+
+// Визначення типу для обраного меню
+type SelectedMenu = {
+id: MenuIds;
+};
+
+// Визначення типу для дій з меню
+type MenuAction = {
+onSelectedMenu: (menu: SelectedMenu) => void;
+};
+
+// Створення контексту для обраного меню
+const MenuSelectedContext = createContext<{ selectedMenu: SelectedMenu }>({
+selectedMenu: { id: "first" }, // Значення за замовчуванням для обраного меню
+});
+
+// Створення контексту для дій з меню
+const MenuActionContext = createContext<MenuAction>({
+onSelectedMenu: noop, // Порожня функція за замовчуванням
+});
+
+// Пропси провайдера контексту
+type PropsProvider = {
+children: ReactNode; // Тип для children
+};
+
+// Компонент-провайдер контексту
+function MenuProvider({ children }: PropsProvider) {
+const [selectedMenu, setSelectedMenu] = useState<SelectedMenu>({ id: "first" }); // Початкове значення для обраного меню
+
+// Мемоізований об'єкт дій з меню
+const menuContextAction = useMemo(
+() => ({
+onSelectedMenu: setSelectedMenu,
+}),
+[]
+);
+
+// Мемоізований об'єкт обраного меню
+const menuContextSelected = useMemo(
+() => ({
+selectedMenu,
+}),
+[selectedMenu]
+);
+
+return (
+<MenuActionContext.Provider value={menuContextAction}>
+<MenuSelectedContext.Provider value={menuContextSelected}>
+{children}
+</MenuSelectedContext.Provider>
+</MenuActionContext.Provider>
+);
+}
+
+// Пропси для компонента меню
+type PropsMenu = {
+menus: Menu[]; // Тип для меню
+};
+
+// Компонент меню
+function MenuComponent({ menus }: PropsMenu) {
+const { onSelectedMenu } = useContext(MenuActionContext); // Отримання функції для вибору меню з контексту
+const { selectedMenu } = useContext(MenuSelectedContext); // Отримання обраного меню з контексту
+
+return (
+<>
+{menus.map((menu) => (
+<div key={menu.id} onClick={() => onSelectedMenu({ id: menu.id })}>
+{menu.title} {selectedMenu.id === menu.id ? "Selected" : "Not selected"}
+</div>
+))}
+</>
+);
+}
+
+// Головний компонент додатка
+export function ComponentApp() {
+const menus: Menu[] = [
+{
+id: "first",
+title: "first",
+},
+{
+id: "second",
+title: "second",
+},
+{
+id: "last",
+title: "last",
+},
+];
+
+return (
+<MenuProvider>
+<MenuComponent menus={menus} />
+</MenuProvider>
+);
+}
